@@ -13,6 +13,7 @@
    - 1.2 [Cyclical Time Features](#12-cyclical-time-features)
    - 1.3 [Rolling Z-Score Normalisation](#13-rolling-z-score-normalisation)
    - 1.4 [Correlation Filter](#14-correlation-filter)
+   - 1.5 [Information Geometry Features](#15-information-geometry-features)
 2. [Bayesian Online Changepoint Detection (BOCPD)](#2-bayesian-online-changepoint-detection-bocpd)
 3. [Deep Learning Architectures](#3-deep-learning-architectures)
    - 3.1 [Decoder-Only Transformer](#31-decoder-only-transformer)
@@ -42,6 +43,11 @@
     - 10.1 [Sharpe-Weighted Voting](#101-sharpe-weighted-voting)
     - 10.2 [Confidence Aggregation](#102-confidence-aggregation)
 11. [Performance Metrics](#11-performance-metrics)
+12. [Trading Strategy Algorithms](#12-trading-strategy-algorithms)
+    - 12.1 [Mean Reversion](#121-mean-reversion)
+    - 12.2 [Trend Following](#122-trend-following)
+    - 12.3 [Volatility Targeting](#123-volatility-targeting)
+    - 12.4 [Regime Adaptive](#124-regime-adaptive)
 
 ---
 
@@ -270,6 +276,91 @@ scan ensures deterministic drop order: for any highly correlated pair, the
 column appearing later in the DataFrame is dropped.
 
 **Configuration:** `FeatureConfig.correlation_threshold = 0.95`
+
+### 1.5 Information Geometry Features
+
+**Source:** `quant/features/information_geometry.py`
+
+Information geometry features capture the distributional properties of
+rolling return windows, providing signals about regime complexity,
+distribution sharpness, and the speed of distributional change.  All
+features are computed over a rolling window of size $W$ (default 60) using
+histogram-based density estimation with $B$ bins (default 50).
+
+#### 1.5.1 Fisher Information
+
+The Fisher information measures the "sharpness" of the return distribution
+with respect to a location parameter.  A high value indicates a peaked,
+well-defined distribution; a low value indicates a diffuse one.
+
+**Histogram density estimation:**
+
+$$p_i = \frac{n_i}{N}, \quad p_i \leftarrow \max(p_i, \epsilon), \quad p \leftarrow \frac{p}{\sum_i p_i}$$
+
+where $n_i$ is the count in bin $i$, $N$ is the total count, and
+$\epsilon = 10^{-10}$ prevents log-zero.
+
+**Score function** (central finite differences with perturbation $\delta$):
+
+$$s_i = \frac{\log p_i^{(+\delta)} - \log p_i^{(-\delta)}}{2\delta}$$
+
+where $p_i^{(\pm\delta)}$ is the histogram density of the data shifted by $\pm\delta$.
+
+**Fisher information:**
+
+$$I(\theta) = \sum_i p_i \cdot s_i^2$$
+
+**Output column:** `ig_fisher_info`
+
+**Configuration:** `ig_rolling_window = 60`, `ig_n_bins = 50`, `ig_fisher_delta = 0.01`
+
+#### 1.5.2 Renyi Entropy Spectrum
+
+The Renyi entropy of order $\alpha$ generalises Shannon entropy:
+
+$$H_\alpha = \frac{1}{1 - \alpha} \log\!\left(\sum_i p_i^\alpha\right)$$
+
+For $\alpha = 1$, this reduces to Shannon entropy:
+
+$$H_1 = -\sum_i p_i \log p_i$$
+
+The system computes $H_\alpha$ for $\alpha \in \{0.5, 2.0, 10.0\}$.
+
+**Mathematical property:** $H_\alpha$ is non-increasing in $\alpha$:
+
+$$\alpha_1 < \alpha_2 \implies H_{\alpha_1} \geq H_{\alpha_2}$$
+
+**Spectral slope:** A linear regression of $H_\alpha$ versus $\alpha$
+yields a slope that characterises how quickly the entropy decreases with
+order.  A steep negative slope indicates heavy tails.
+
+**Output columns:** `ig_renyi_h_0.5`, `ig_renyi_h_2.0`, `ig_renyi_h_10.0`, `ig_renyi_slope`
+
+**Configuration:** `ig_renyi_alphas = (0.5, 2.0, 10.0)`
+
+#### 1.5.3 KL Divergence Rate
+
+The KL divergence rate measures how fast the return distribution is
+changing over time:
+
+$$\text{KL\_rate}(\ell) = \frac{D_{\text{KL}}(P_t \| P_{t-\ell})}{\ell}$$
+
+where:
+
+$$D_{\text{KL}}(P \| Q) = \sum_i p_i \log \frac{p_i}{q_i}$$
+
+Both $P_t$ and $P_{t-\ell}$ are computed over the same rolling window
+size $W$, using common bin edges (union of both value ranges) to ensure
+comparability.
+
+A high KL rate indicates rapid distributional change, which is
+characteristic of regime transitions.
+
+**Output columns:** `ig_kl_rate_5`, `ig_kl_rate_20`
+
+**Configuration:** `ig_kl_lags = (5, 20)`
+
+**Warmup:** The first $W + \max(\ell)$ rows (default 80) contain NaN values.
 
 ---
 
@@ -1048,6 +1139,128 @@ $$\text{Max DD Duration} = \max\!\bigl(\text{consecutive bars below running peak
 
 ---
 
+## 12. Trading Strategy Algorithms
+
+**Source:** `quant/strategies/`
+
+Four rule-based trading strategies that complement the ML-based
+`MLSignalStrategy` and the `EnsembleStrategy`.
+
+### 12.1 Mean Reversion
+
+**Source:** `quant/strategies/mean_reversion.py`
+
+Generates signals when price reaches statistical extremes, expecting
+reversion to the mean.
+
+**Required features:** `rsi_14`, `bb_pct`
+
+**Long condition** (buy, expecting price to revert up):
+
+$$\text{RSI}_{14} < \text{oversold} \;\wedge\; \text{BB\%} < \text{proximity}$$
+
+**Short condition** (sell, expecting price to revert down):
+
+$$\text{RSI}_{14} > \text{overbought} \;\wedge\; \text{BB\%} > 1 - \text{proximity}$$
+
+**Confidence** (average of RSI strength and BB strength):
+
+For a long signal:
+
+$$c_{\text{RSI}} = \frac{\text{oversold} - \text{RSI}}{\text{oversold}}, \quad c_{\text{BB}} = \frac{\text{proximity} - \text{BB\%}}{\text{proximity}}$$
+
+$$c = \text{clip}\!\left(\frac{c_{\text{RSI}} + c_{\text{BB}}}{2}, \; 0, \; 1\right)$$
+
+**Target position:** $p = \text{clip}(d \cdot c, -1, 1)$
+
+**Configuration:** `mr_rsi_oversold = 30`, `mr_rsi_overbought = 70`, `mr_bb_proximity = 0.1`
+
+### 12.2 Trend Following
+
+**Source:** `quant/strategies/trend_following.py`
+
+Trades in the direction of the prevailing trend when ADX confirms a
+trending market.
+
+**Required features:** `macd`, `macd_signal`, `adx`
+
+**Entry filter:**
+
+$$\text{ADX} \geq \tau_{\text{ADX}}$$
+
+**Direction:**
+
+$$d = \text{sign}(\text{MACD} - \text{MACD}_{\text{signal}})$$
+
+**Confidence** (ADX scaled to $[0, 1]$):
+
+$$c = \text{clip}\!\left(\frac{\text{ADX} - \tau_{\text{ADX}}}{75 - \tau_{\text{ADX}}}, \; 0, \; 1\right)$$
+
+**Target position:** $p = \text{clip}(d \cdot c, -1, 1)$
+
+**Configuration:** `tf_adx_threshold = 25`
+
+### 12.3 Volatility Targeting
+
+**Source:** `quant/strategies/volatility_targeting.py`
+
+Scales position size to achieve a target annualised volatility, reducing
+exposure in high-volatility environments and increasing it in calm markets.
+
+**Realised volatility** (over lookback window $L$):
+
+$$\sigma_{\text{real}} = \text{std}(\{r_{t-L+1}, \ldots, r_t\}, \text{ddof}=1) \cdot \sqrt{A}$$
+
+where $r_t = \ln(C_t / C_{t-1})$ and $A = 252$ (annualisation factor).
+
+**Position scale:**
+
+$$s = \min\!\left(\frac{\sigma_{\text{target}}}{\sigma_{\text{real}}}, \; \lambda_{\max}\right)$$
+
+**Direction:** From `model_predictions` (sign of mean) if available,
+otherwise sign of the most recent log-return.
+
+**Target position:**
+
+$$p = \text{clip}(d \cdot s, -1, 1)$$
+
+**Confidence:**
+
+$$c = \text{clip}(\min(s, 1), \; 0, \; 1)$$
+
+**Configuration:** `vt_target_vol = 0.10`, `vt_vol_lookback = 20`,
+`vt_annualization_factor = 252`, `vt_max_leverage = 2.0`
+
+### 12.4 Regime Adaptive
+
+**Source:** `quant/strategies/regime_adaptive.py`
+
+A meta-strategy that wraps one or more sub-strategies and adjusts their
+confidence based on the current regime (detected by BOCPD changepoint
+scores).
+
+**Confidence adjustment** (when $\text{cp\_score} > \tau_{\text{cp}}$):
+
+$$c' = c \cdot (1 - \rho \cdot \text{cp\_score})$$
+
+where $\rho$ is the confidence reduction factor and $\tau_{\text{cp}}$ is
+the changepoint threshold.
+
+**Suppression:** Signals with adjusted confidence $c' < c_{\min}$ are
+discarded.
+
+**Dual mode:** When sub-strategies are named `"trend"` and `"reversion"`:
+
+$$\text{active} = \begin{cases}
+\text{trend strategy} & \text{if } \text{ADX} \geq \tau_{\text{ADX}} \\
+\text{reversion strategy} & \text{if } \text{ADX} < \tau_{\text{ADX}}
+\end{cases}$$
+
+**Configuration:** `ra_cp_threshold = 0.3`, `ra_cp_confidence_reduction = 0.5`,
+`tf_adx_threshold = 25` (reused for dual-mode selection)
+
+---
+
 ## Appendix A: Configuration Defaults Summary
 
 | Parameter | Value | Module |
@@ -1073,6 +1286,21 @@ $$\text{Max DD Duration} = \max\!\bigl(\text{consecutive bars below running peak
 | `take_profit_atr_mult` | 3.0x | TradingConfig |
 | `slippage_bps` | 5 bp | TradingConfig |
 | `commission_bps` | 10 bp | TradingConfig |
+| `ig_rolling_window` | 60 | FeatureConfig |
+| `ig_n_bins` | 50 | FeatureConfig |
+| `ig_renyi_alphas` | (0.5, 2.0, 10.0) | FeatureConfig |
+| `ig_kl_lags` | (5, 20) | FeatureConfig |
+| `ig_fisher_delta` | 0.01 | FeatureConfig |
+| `mr_rsi_oversold` | 30.0 | TradingConfig |
+| `mr_rsi_overbought` | 70.0 | TradingConfig |
+| `mr_bb_proximity` | 0.1 | TradingConfig |
+| `tf_adx_threshold` | 25.0 | TradingConfig |
+| `vt_target_vol` | 0.10 | TradingConfig |
+| `vt_vol_lookback` | 20 | TradingConfig |
+| `vt_annualization_factor` | 252.0 | TradingConfig |
+| `vt_max_leverage` | 2.0 | TradingConfig |
+| `ra_cp_threshold` | 0.3 | TradingConfig |
+| `ra_cp_confidence_reduction` | 0.5 | TradingConfig |
 | `initial_capital` | $100,000 | BacktestConfig |
 
 ## Appendix B: References

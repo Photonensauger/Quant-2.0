@@ -67,6 +67,13 @@ class FeatureConfig:
     bocpd_kappa0: float = 1.0
     bocpd_mu0: float = 0.0
 
+    # Information Geometry
+    ig_rolling_window: int = 60
+    ig_n_bins: int = 50
+    ig_renyi_alphas: tuple[float, ...] = (0.5, 2.0, 10.0)
+    ig_kl_lags: tuple[int, ...] = (5, 20)
+    ig_fisher_delta: float = 0.01
+
     # Targets
     forecast_horizon: int = 5  # predict N bars ahead log-return
 
@@ -235,6 +242,24 @@ class TradingConfig:
     # Stop loss / Take profit
     stop_loss_atr_mult: float = 2.0  # stop loss = 2x ATR
     take_profit_atr_mult: float = 3.0  # take profit = 3x ATR
+
+    # Mean Reversion
+    mr_rsi_oversold: float = 30.0
+    mr_rsi_overbought: float = 70.0
+    mr_bb_proximity: float = 0.1
+
+    # Trend Following
+    tf_adx_threshold: float = 25.0
+
+    # Volatility Targeting
+    vt_target_vol: float = 0.10
+    vt_vol_lookback: int = 20
+    vt_annualization_factor: float = 252.0
+    vt_max_leverage: float = 2.0
+
+    # Regime Adaptive
+    ra_cp_confidence_reduction: float = 0.5
+    ra_cp_threshold: float = 0.3
 
 
 # ---------------------------------------------------------------------------

@@ -22,6 +22,7 @@ from loguru import logger
 
 from quant.config.settings import FeatureConfig
 from quant.features.changepoint import BayesianChangePointDetector
+from quant.features.information_geometry import compute_information_geometry_features
 from quant.features.technical import compute_technical_features
 from quant.features.time_features import compute_time_features
 
@@ -229,6 +230,9 @@ class FeaturePipeline:
 
         # Changepoint features (run over log-returns)
         feat_df = self._add_changepoint_features(feat_df)
+
+        # Information geometry features
+        feat_df = compute_information_geometry_features(feat_df, self.cfg)
 
         return feat_df
 
