@@ -99,6 +99,48 @@ def small_model_config() -> ModelConfig:
         mom_n_layers=1,
         mom_d_ff=64,
         mom_dropout=0.0,
+        # SchrodingerTransformer
+        sqt_d_model=32,
+        sqt_n_heads=2,
+        sqt_n_layers=1,
+        sqt_d_ff=64,
+        sqt_dropout=0.0,
+        sqt_n_regimes=3,
+        # TopologicalAttentionNetwork
+        top_d_model=32,
+        top_n_heads=2,
+        top_n_layers=1,
+        top_d_ff=64,
+        top_dropout=0.0,
+        top_window_size=5,
+        top_n_scales=2,
+        # AdversarialRegimeModel
+        adv_d_model=32,
+        adv_n_heads=2,
+        adv_n_layers=1,
+        adv_d_ff=64,
+        adv_dropout=0.0,
+        adv_n_regimes=3,
+        # EntropicPortfolioDiffusion
+        epd_d_model=32,
+        epd_n_heads=2,
+        epd_n_layers=1,
+        epd_d_ff=64,
+        epd_dropout=0.0,
+        epd_n_diffusion_steps=3,
+        epd_entropy_weight=0.01,
+        # CausalDiscoveryTransformer
+        cdt_d_model=32,
+        cdt_n_heads=2,
+        cdt_n_layers=1,
+        cdt_d_ff=64,
+        cdt_dropout=0.0,
+        cdt_sparsity_weight=0.01,
+        # HamiltonianNeuralODE
+        hno_d_model=32,
+        hno_n_leapfrog_steps=3,
+        hno_dropout=0.0,
+        hno_hidden_size=64,
     )
 
 

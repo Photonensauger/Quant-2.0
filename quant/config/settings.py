@@ -119,6 +119,54 @@ class ModelConfig:
     ppo_entropy_coeff: float = 0.01
     ppo_value_coeff: float = 0.5
 
+    # SchrodingerTransformer
+    sqt_d_model: int = 64
+    sqt_n_heads: int = 4
+    sqt_n_layers: int = 2
+    sqt_d_ff: int = 256
+    sqt_dropout: float = 0.1
+    sqt_n_regimes: int = 4
+
+    # TopologicalAttentionNetwork
+    top_d_model: int = 64
+    top_n_heads: int = 4
+    top_n_layers: int = 2
+    top_d_ff: int = 256
+    top_dropout: float = 0.1
+    top_window_size: int = 10
+    top_n_scales: int = 3
+
+    # AdversarialRegimeModel
+    adv_d_model: int = 64
+    adv_n_heads: int = 4
+    adv_n_layers: int = 2
+    adv_d_ff: int = 256
+    adv_dropout: float = 0.1
+    adv_n_regimes: int = 3
+
+    # EntropicPortfolioDiffusion
+    epd_d_model: int = 64
+    epd_n_heads: int = 4
+    epd_n_layers: int = 2
+    epd_d_ff: int = 256
+    epd_dropout: float = 0.1
+    epd_n_diffusion_steps: int = 10
+    epd_entropy_weight: float = 0.01
+
+    # CausalDiscoveryTransformer
+    cdt_d_model: int = 64
+    cdt_n_heads: int = 4
+    cdt_n_layers: int = 2
+    cdt_d_ff: int = 256
+    cdt_dropout: float = 0.1
+    cdt_sparsity_weight: float = 0.01
+
+    # HamiltonianNeuralODE
+    hno_d_model: int = 64
+    hno_n_leapfrog_steps: int = 6
+    hno_dropout: float = 0.1
+    hno_hidden_size: int = 128
+
 
 # ---------------------------------------------------------------------------
 # Training
