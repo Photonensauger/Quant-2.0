@@ -63,8 +63,8 @@ class DataStorage:
         path = self._cache_path(symbol, interval)
         cached = self._read_parquet(path)
 
-        start_ts = pd.Timestamp(start, tz="UTC")
-        end_ts = pd.Timestamp(end, tz="UTC")
+        start_ts = pd.Timestamp(start).tz_localize("UTC") if pd.Timestamp(start).tz is None else pd.Timestamp(start).tz_convert("UTC")
+        end_ts = pd.Timestamp(end).tz_localize("UTC") if pd.Timestamp(end).tz is None else pd.Timestamp(end).tz_convert("UTC")
 
         if cached is not None and not cached.empty:
             cache_start = cached.index.min()
