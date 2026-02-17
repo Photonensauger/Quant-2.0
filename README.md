@@ -88,4 +88,4 @@ docs/             # Architecture and algorithm documentation
 
 ## License
 
-Private repository.
+This project is licensed under the [MIT License](LICENSE).
