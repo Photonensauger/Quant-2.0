@@ -6,10 +6,10 @@ Quant 2.0 is a modular, end-to-end quantitative trading platform that combines d
 
 ## Key Features
 
-- **Multiple Model Architectures** — Decoder Transformer, ITransformer (ICLR 2024), Attention-LSTM, Momentum Transformer, and a PPO reinforcement learning agent
+- **Multiple Model Architectures** — Decoder Transformer, ITransformer (ICLR 2024), Attention-LSTM, Momentum Transformer, Schrodinger Transformer, Topological Attention Network, Adversarial Regime Model, Entropic Portfolio Diffusion, Causal Discovery Transformer, Hamiltonian Neural ODE, and a PPO reinforcement learning agent
 - **Self-Learning Loop** — Online retraining triggered by performance degradation, schedule, or Bayesian change-point detection (BOCPD)
-- **Ensemble Strategy** — Sharpe-weighted voting across models with automatic weight updates
-- **Feature Engineering** — 41 technical indicators, 10 calendar encodings, BOCPD regime detection, correlation filtering, and rolling z-score normalization
+- **Trading Strategies** — Mean Reversion (RSI + Bollinger Bands), Trend Following (MACD + ADX), Volatility Targeting, Regime Adaptive (changepoint-aware), ML Signal, and Sharpe-weighted Ensemble voting
+- **Feature Engineering** — 41 technical indicators, 10 calendar encodings, BOCPD regime detection, 7 information geometry features (Fisher information, Renyi entropy spectrum, KL divergence rate), correlation filtering, and rolling z-score normalization
 - **Portfolio Management** — Mean-variance, min-variance, risk-parity, and equal-weight optimization with Kelly/volatility-adjusted position sizing
 - **Risk Management** — VaR, max drawdown, daily loss limits, concentration checks, and ATR-based stop-loss/take-profit
 - **Backtesting Engine** — Walk-forward validation with 17 performance metrics and Plotly HTML dashboards
@@ -72,9 +72,9 @@ python scripts/live_trade.py --strategy ensemble --broker paper \
 quant/
 ├── config/       # SystemConfig and all sub-configs
 ├── data/         # Data providers, Parquet storage, PyTorch datasets
-├── features/     # Technical indicators, time features, BOCPD, pipeline
-├── models/       # Transformer, iTransformer, LSTM, PPO, losses, trainer
-├── strategies/   # Signal generation, ML strategy, ensemble voting
+├── features/     # Technical indicators, time features, BOCPD, information geometry, pipeline
+├── models/       # Transformer, iTransformer, LSTM, Momentum, Schrodinger, Topological, Adversarial, Entropic Diffusion, Causal Discovery, Hamiltonian ODE, PPO, losses, trainer
+├── strategies/   # Mean reversion, trend following, volatility targeting, regime adaptive, ML signal, ensemble
 ├── portfolio/    # Portfolio optimization, position sizing, risk management
 ├── backtest/     # Backtest engine and performance metrics
 ├── execution/    # Paper and live (Alpaca) trade executors
