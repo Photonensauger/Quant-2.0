@@ -182,6 +182,8 @@ class BacktestEngine:
             timestamps = [datetime(2000, 1, 1)] * n_bars
 
         # -- Bar-by-bar loop ---------------------------------------------------
+        pending_signals: dict[str, Signal] = {}
+
         for bar_idx in range(n_bars):
             current_ts = timestamps[bar_idx]
 
@@ -192,7 +194,19 @@ class BacktestEngine:
             self._risk_check_positions(state, data, bar_idx, current_ts)
             self._risk_check_portfolio(state)
 
-            # 3. Signal generation (feature pipeline -> model -> strategy)
+            # 2b. Execute pending signals from previous bar at this bar's open
+            #     (after risk checks so SL/TP fire before reversals)
+            for sym, sig in pending_signals.items():
+                self._process_signal(
+                    signal=sig,
+                    state=state,
+                    data=data,
+                    bar_idx=bar_idx,
+                    current_ts=current_ts,
+                )
+            pending_signals.clear()
+
+            # 3. Signal generation → buffer for next-bar execution
             if strategy is not None and bar_idx >= self._model_cfg.seq_len:
                 for symbol in symbols:
                     signal = self._generate_signal(
@@ -205,14 +219,7 @@ class BacktestEngine:
                         current_ts=current_ts,
                     )
                     if signal is not None and signal.direction != 0:
-                        # 4. Position sizing + risk + execute
-                        self._process_signal(
-                            signal=signal,
-                            state=state,
-                            data=data,
-                            bar_idx=bar_idx,
-                            current_ts=current_ts,
-                        )
+                        pending_signals[symbol] = signal
 
             # 5. Update equity curve
             equity = self._compute_equity(state)
@@ -408,8 +415,14 @@ class BacktestEngine:
         last_bar = self._last_signal_bar_for(symbol, {})  # placeholder
         # (We pass the actual state from the caller -- see _process_signal)
 
-        # Slice the lookback window for feature computation
-        start = max(0, bar_idx - seq_len + 1)
+        # Slice the lookback window for feature computation.
+        # The feature pipeline needs extra bars beyond seq_len for indicator
+        # warmup (e.g. SMA, BOCPD, information geometry rolling windows).
+        # We pass a larger window to the pipeline, then take only the last
+        # seq_len rows of computed features for the model.
+        feature_warmup = self.cfg.features.warmup_period + self.cfg.features.ig_rolling_window
+        lookback = seq_len + feature_warmup
+        start = max(0, bar_idx - lookback + 1)
         window_df = df.iloc[start : bar_idx + 1].copy()
 
         if len(window_df) < seq_len:
@@ -514,8 +527,9 @@ class BacktestEngine:
         df = data[symbol]
 
         # If we already have a position in this symbol, close it first
+        # Use the execution bar's open (same price where the new position opens)
         if symbol in state["positions"]:
-            close_price = self._get_price(df, bar_idx, "close")
+            close_price = self._get_price(df, bar_idx, "open")
             self._close_position(
                 state, symbol, close_price, bar_idx, current_ts, "signal_reversal"
             )

@@ -75,7 +75,7 @@ class FeatureConfig:
     ig_fisher_delta: float = 0.01
 
     # Targets
-    forecast_horizon: int = 5  # predict N bars ahead log-return
+    forecast_horizon: int = 10  # predict N bars ahead log-return
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ class ModelConfig:
 
     # Shared
     seq_len: int = 60  # input sequence length
-    forecast_horizon: int = 5
+    forecast_horizon: int = 10
     n_features: int = 50  # set dynamically after feature pipeline
 
     # Transformer (Decoder-Only)
@@ -231,9 +231,9 @@ class TradingConfig:
     max_correlation: float = 0.7  # max portfolio correlation
 
     # Strategy
-    signal_cooldown: int = 5  # bars between signals for same asset
-    min_confidence: float = 0.6  # minimum signal confidence to trade
-    confirmation_bars: int = 2  # bars signal must persist
+    signal_cooldown: int = 3  # bars between signals for same asset
+    min_confidence: float = 0.4  # minimum signal confidence to trade
+    confirmation_bars: int = 1  # bars signal must persist
 
     # Execution
     slippage_bps: float = 5.0  # 5 basis points slippage
