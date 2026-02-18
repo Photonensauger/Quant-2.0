@@ -32,6 +32,11 @@ live = [
     "alpaca-trade-api>=3.0.0",
     "websocket-client>=1.6.0",
 ]
+dashboard = [
+    "dash>=2.15.0",
+    "dash-bootstrap-components>=1.5.0",
+    "gunicorn>=22.0.0",
+]
 
 [tool.setuptools.packages.find]
 include = ["quant*", "config*"]

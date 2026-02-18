@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quant2-dashboard
+  namespace: quant
+spec:
+  selector:
+    app: quant2-dashboard
+  ports:
+    - port: 8050
+      targetPort: 8050
+      protocol: TCP
