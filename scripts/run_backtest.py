@@ -17,6 +17,7 @@ python scripts/run_backtest.py --strategy ensemble --assets AAPL --start 2025-01
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -314,13 +315,22 @@ def main(argv: list[str] | None = None) -> int:
         print("\nERROR: No data available. Run scripts/download_data.py first.", file=sys.stderr)
         return 1
 
-    # --- Feature pipeline (fit on backtest data) -----------------------------
+    # --- Feature pipeline (reuse training state if available) ----------------
     print("\n  Running feature pipeline...")
     pipeline = FeaturePipeline(config.features)
 
-    # Fit on the first symbol's data to establish feature dimensions
-    ref_symbol = list(data.keys())[0]
-    features, targets = pipeline.fit_transform(data[ref_symbol])
+    pipeline_state_path = config.checkpoint_dir / "feature_pipeline_state.json"
+    if pipeline_state_path.exists():
+        with open(pipeline_state_path) as f:
+            pipeline.load_state(json.load(f))
+        ref_symbol = list(data.keys())[0]
+        features, targets = pipeline.transform(data[ref_symbol])
+        print(f"  Loaded pipeline state from {pipeline_state_path}")
+    else:
+        print("  WARNING: No saved pipeline state found. Fitting on backtest data (may cause dimension mismatch).")
+        ref_symbol = list(data.keys())[0]
+        features, targets = pipeline.fit_transform(data[ref_symbol])
+
     n_features = pipeline.n_features
     config.model.n_features = n_features
     print(f"  Features: {n_features} dimensions, {features.shape[0]:,} valid rows")
@@ -394,6 +404,23 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  Avg Loss:             ${metrics.get('avg_loss', 0):,.2f}")
     print(f"  Expectancy:           ${metrics.get('expectancy', 0):,.2f}")
     print(f"{'=' * 60}")
+
+    # --- Export JSON for dashboard -------------------------------------------
+    json_dir = Path(config.data.cache_dir).parent / "backtest"
+    json_dir.mkdir(parents=True, exist_ok=True)
+    assets_label = args.assets.replace(",", "_") if hasattr(args, "assets") else "multi"
+    json_name = f"{args.strategy}_{assets_label}_{args.interval}.json"
+    json_export = {
+        "equity_curve": result.equity_curve,
+        "returns": result.returns,
+        "trade_log": result.trade_log,
+        "metrics": result.metrics,
+        "timestamps": [str(t) for t in result.timestamps],
+    }
+    json_path = json_dir / json_name
+    with open(json_path, "w") as jf:
+        json.dump(json_export, jf, indent=2, default=str)
+    print(f"\n  JSON result saved to: {json_path}")
 
     # --- Generate dashboard --------------------------------------------------
     print(f"\n  Generating performance dashboard...")

@@ -19,6 +19,7 @@ python scripts/train_model.py --model itransformer --assets AAPL --epochs 30 --s
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -382,6 +383,13 @@ def main(argv: list[str] | None = None) -> int:
     print("  Running feature pipeline...")
     pipeline = FeaturePipeline(config.features)
     features, targets = pipeline.fit_transform(raw_data)
+
+    # Save pipeline state so backtest can use the same feature set
+    pipeline_state_path = config.checkpoint_dir / "feature_pipeline_state.json"
+    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    with open(pipeline_state_path, "w") as f:
+        json.dump(pipeline.get_state(), f)
+    print(f"  Pipeline state saved to {pipeline_state_path}")
 
     if features.shape[0] == 0:
         print("  ERROR: Feature pipeline produced zero valid rows.", file=sys.stderr)
