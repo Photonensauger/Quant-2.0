@@ -408,8 +408,14 @@ class BacktestEngine:
         last_bar = self._last_signal_bar_for(symbol, {})  # placeholder
         # (We pass the actual state from the caller -- see _process_signal)
 
-        # Slice the lookback window for feature computation
-        start = max(0, bar_idx - seq_len + 1)
+        # Slice the lookback window for feature computation.
+        # The feature pipeline needs extra bars beyond seq_len for indicator
+        # warmup (e.g. SMA, BOCPD, information geometry rolling windows).
+        # We pass a larger window to the pipeline, then take only the last
+        # seq_len rows of computed features for the model.
+        feature_warmup = self.cfg.features.warmup_period + self.cfg.features.ig_rolling_window
+        lookback = seq_len + feature_warmup
+        start = max(0, bar_idx - lookback + 1)
         window_df = df.iloc[start : bar_idx + 1].copy()
 
         if len(window_df) < seq_len:

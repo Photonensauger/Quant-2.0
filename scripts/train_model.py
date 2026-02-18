@@ -427,6 +427,18 @@ def main(argv: list[str] | None = None) -> int:
 
     total_elapsed = time.time() - t_total_start
 
+    # --- Save training metrics for accuracy-based ensemble weighting ---------
+    training_metrics = {
+        r["model"]: r["directional_accuracy"]
+        for r in all_results
+        if r.get("status") == "OK"
+    }
+    if training_metrics:
+        metrics_path = config.checkpoint_dir / "training_metrics.json"
+        with open(metrics_path, "w") as f:
+            json.dump(training_metrics, f, indent=2)
+        print(f"\n  Training metrics saved to {metrics_path}")
+
     # --- Summary -------------------------------------------------------------
     print(f"\n{'=' * 60}")
     print(f"  Training Summary")

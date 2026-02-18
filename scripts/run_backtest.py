@@ -167,10 +167,28 @@ def build_strategy(
         for name in models:
             strategies[name] = MLSignalStrategy(config.trading, name=f"ml_{name}")
 
+        # Load accuracy-based weights from training metrics if available
+        initial_weights = None
+        metrics_path = config.checkpoint_dir / "training_metrics.json"
+        if metrics_path.exists():
+            try:
+                with open(metrics_path) as f:
+                    training_metrics = json.load(f)
+                # Filter to models actually used in this ensemble
+                relevant = {k: v for k, v in training_metrics.items() if k in models}
+                if relevant:
+                    total_acc = sum(relevant.values())
+                    if total_acc > 0:
+                        initial_weights = {k: v / total_acc for k, v in relevant.items()}
+                        print(f"  Loaded accuracy-based weights: {initial_weights}")
+            except (json.JSONDecodeError, OSError) as exc:
+                print(f"  WARNING: Could not load training metrics: {exc}", file=sys.stderr)
+
         return EnsembleStrategy(
             config=config.trading,
             strategies=strategies,
             name="ensemble",
+            initial_weights=initial_weights,
         )
 
     elif strategy_name == "ml":
@@ -283,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.models:
         model_names = [m.strip() for m in args.models.split(",") if m.strip()]
     else:
-        model_names = list(MODEL_REGISTRY.keys())
+        model_names = ["transformer", "itransformer", "lstm"]
 
     print(f"\n{'=' * 60}")
     print(f"  Backtesting Engine")
