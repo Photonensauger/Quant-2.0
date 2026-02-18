@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quant2-dashboard
+  namespace: quant
+  labels:
+    app: quant2-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quant2-dashboard
+  template:
+    metadata:
+      labels:
+        app: quant2-dashboard
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: dashboard
+          image: quant2-dashboard:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8050
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: checkpoints
+              mountPath: /app/checkpoints
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8050
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8050
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+      volumes:
+        - name: data
+          hostPath:
+            path: /opt/quant2-dashboard/data
+            type: DirectoryOrCreate
+        - name: checkpoints
+          hostPath:
+            path: /opt/quant2-dashboard/checkpoints
+            type: DirectoryOrCreate

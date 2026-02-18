@@ -1,0 +1,28 @@
+services:
+  dashboard:
+    image: quant2-dashboard:latest
+    container_name: quant2-dashboard
+    ports:
+      - "8050:8050"
+    volumes:
+      - ../data/cache:/app/data/cache:ro
+      - ../data/backtest:/app/data/backtest:ro
+      - ../data/models:/app/data/models:ro
+    environment:
+      - DASH_DEBUG=false
+      - QUANT_DATA_DIR=/app/data/cache
+      - QUANT_BACKTEST_DIR=/app/data/backtest
+      - QUANT_MODELS_DIR=/app/data/models
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          memory: 512M
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

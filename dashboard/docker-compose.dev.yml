@@ -1,0 +1,18 @@
+services:
+  dashboard:
+    build:
+      context: ..
+      dockerfile: dashboard/Dockerfile
+    container_name: quant2-dashboard-dev
+    ports:
+      - "8050:8050"
+    volumes:
+      - ../dashboard:/app/dashboard
+      - ../quant:/app/quant
+      - ../data/cache:/app/data/cache:ro
+      - ../data/backtest:/app/data/backtest:ro
+    environment:
+      - DASH_DEBUG=true
+      - QUANT_DATA_DIR=/app/data/cache
+      - QUANT_BACKTEST_DIR=/app/data/backtest
+    command: ["python", "-m", "dashboard.app"]
