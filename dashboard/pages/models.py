@@ -535,6 +535,7 @@ def start_training(n_clicks, model, assets, interval, days, epochs, batch_size):
     Output("train-run-log", "children", allow_duplicate=True),
     Output("train-run-poll", "disabled", allow_duplicate=True),
     Output("train-run-btn", "disabled", allow_duplicate=True),
+    Output("models-content", "children", allow_duplicate=True),
     Input("train-run-poll", "n_intervals"),
     prevent_initial_call=True,
 )
@@ -549,15 +550,15 @@ def poll_training(_n):
             }),
             "Running...",
         ], className="bt-status-badge running")
-        return status, log_text or "Starting training...\n", no_update, True
+        return status, log_text or "Starting training...\n", no_update, True, no_update
 
     rc = _train_read_rc()
 
     if rc is None and not _TRAIN_PID_FILE.exists():
-        return no_update, no_update, True, False
+        return no_update, no_update, True, False, no_update
 
     if rc is None:
-        return no_update, log_text, no_update, True
+        return no_update, log_text, no_update, True, no_update
 
     # Clear loader cache so model cards refresh with new checkpoint timestamps
     loader.clear_cache()
@@ -573,4 +574,5 @@ def poll_training(_n):
             f"Failed (exit {rc})",
         ], className="bt-status-badge failed")
 
-    return status, log_text, True, False
+    # Rebuild models content immediately so cards reflect new checkpoint status
+    return status, log_text, True, False, update_models(0)
