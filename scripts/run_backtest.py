@@ -48,7 +48,11 @@ from quant.models import (
 )
 from quant.strategies.base import BaseStrategy
 from quant.strategies.ensemble import EnsembleStrategy
+from quant.strategies.mean_reversion import MeanReversionStrategy
 from quant.strategies.ml_signal import MLSignalStrategy
+from quant.strategies.regime_adaptive import RegimeAdaptiveStrategy
+from quant.strategies.trend_following import TrendFollowingStrategy
+from quant.strategies.volatility_targeting import VolatilityTargetingStrategy
 from quant.utils.logging import setup_logging
 from quant.utils.viz import PerformanceVisualizer
 
@@ -208,6 +212,18 @@ def build_strategy(
         model_name = next(iter(models), "default")
         return MLSignalStrategy(config.trading, name=f"ml_{model_name}")
 
+    elif strategy_name == "mean_reversion":
+        return MeanReversionStrategy(config.trading, name="mean_reversion")
+
+    elif strategy_name == "trend_following":
+        return TrendFollowingStrategy(config.trading, name="trend_following")
+
+    elif strategy_name == "volatility_targeting":
+        return VolatilityTargetingStrategy(config.trading, name="volatility_targeting")
+
+    elif strategy_name == "regime_adaptive":
+        return RegimeAdaptiveStrategy(config.trading, name="regime_adaptive")
+
     else:
         raise ValueError(f"Unknown strategy: {strategy_name}")
 
@@ -230,8 +246,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--strategy",
         type=str,
         required=True,
-        choices=["ml", "ensemble"],
-        help="Strategy type: 'ml' (single model) or 'ensemble' (all models).",
+        choices=["ml", "ensemble", "mean_reversion", "trend_following",
+                 "volatility_targeting", "regime_adaptive"],
+        help="Strategy type: 'ml', 'ensemble', 'mean_reversion', 'trend_following', "
+             "'volatility_targeting', or 'regime_adaptive'.",
     )
     parser.add_argument(
         "--assets",

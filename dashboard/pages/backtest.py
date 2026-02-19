@@ -279,6 +279,10 @@ layout = html.Div([
                     options=[
                         {"label": "Ensemble", "value": "ensemble"},
                         {"label": "ML (single model)", "value": "ml"},
+                        {"label": "Mean Reversion", "value": "mean_reversion"},
+                        {"label": "Trend Following", "value": "trend_following"},
+                        {"label": "Volatility Targeting", "value": "volatility_targeting"},
+                        {"label": "Regime Adaptive", "value": "regime_adaptive"},
                     ],
                     value="ensemble",
                     clearable=False,
