@@ -288,11 +288,25 @@ layout = html.Div([
     html.Div(id="backtest-detail"),
 
     # Comparison section
+    dcc.ConfirmDialog(
+        id="bt-reset-confirm",
+        message="Alle Backtest-Ergebnisse unwiderruflich löschen?",
+    ),
     html.Div([
         html.Div([
             html.Div(className="section-indicator"),
             html.Span("Compare Backtests", className="section-title"),
-        ], className="section-header"),
+            html.Div([
+                html.Span(id="bt-reset-status"),
+                html.Button(
+                    [html.I(className="bi bi-trash3", style={"fontSize": "0.7rem"}), "Reset All"],
+                    id="bt-reset-btn",
+                    n_clicks=0,
+                    className="bt-export-btn",
+                    style={"color": "var(--status-loss)", "borderColor": "rgba(239,68,68,0.4)"},
+                ),
+            ], style={"marginLeft": "auto", "display": "flex", "alignItems": "center", "gap": "0.6rem"}),
+        ], className="section-header", style={"display": "flex", "alignItems": "center"}),
         html.Div([
             dcc.Checklist(
                 id="backtest-compare-select",
@@ -620,6 +634,53 @@ def export_trades_json(n_clicks, selected_bt):
         return no_update
     return dict(content=json.dumps(trades, indent=2, default=str),
                 filename=f"{selected_bt}_trades.json")
+
+
+# ---------------------------------------------------------------------------
+# Reset All Backtests
+# ---------------------------------------------------------------------------
+
+@callback(
+    Output("bt-reset-confirm", "displayed"),
+    Input("bt-reset-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
+def confirm_reset(n_clicks):
+    if not n_clicks:
+        return False
+    return True
+
+
+@callback(
+    Output("bt-reset-status", "children"),
+    Output("backtest-bt-select", "options", allow_duplicate=True),
+    Output("backtest-bt-select", "value", allow_duplicate=True),
+    Output("backtest-compare-select", "options", allow_duplicate=True),
+    Output("backtest-compare-select", "value"),
+    Output("backtest-comparison-chart", "children", allow_duplicate=True),
+    Input("bt-reset-confirm", "submit_n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_all_backtests(submit_n_clicks):
+    if not submit_n_clicks:
+        return no_update, no_update, no_update, no_update, no_update, no_update
+
+    bt_files = loader.list_backtest_results()
+    count = 0
+    for f in bt_files:
+        try:
+            f.unlink()
+            count += 1
+        except OSError:
+            pass
+
+    loader.clear_cache()
+
+    status = html.Span(
+        f"{count} Backtests gelöscht.",
+        style={"fontSize": "0.72rem", "color": "var(--status-profit)", "fontFamily": "var(--font-mono)"},
+    )
+    return status, [], None, [], [], html.Div()
 
 
 # ---------------------------------------------------------------------------
