@@ -1,7 +1,9 @@
 """Tests for dashboard/pages/models.py — pure unit tests."""
 
 from pathlib import Path
+from unittest.mock import patch
 
+import torch
 from dash import html, dcc
 
 from dashboard.pages import models as models_mod
@@ -66,3 +68,52 @@ class TestUpdateModels:
         assert isinstance(result, html.Div)
         # kpis + registry + comparison
         assert len(result.children) == 3
+
+
+# ── Device KPI card ─────────────────────────────────────────────────────
+
+class TestDeviceKpi:
+    """The Models page must display a Device KPI card."""
+
+    def _get_kpi_grid(self, monkeypatch, mock_loader, tmp_path):
+        monkeypatch.setattr(models_mod, "loader", mock_loader)
+        monkeypatch.setattr(models_mod, "_CHECKPOINT_DIR", tmp_path)
+        result = models_mod.update_models(0)
+        # First child is the KPI grid div
+        return result.children[0]
+
+    def test_device_kpi_present(self, monkeypatch, mock_loader, tmp_path):
+        kpi_grid = self._get_kpi_grid(monkeypatch, mock_loader, tmp_path)
+        # KPIs: Models, Trained, Backtests, Device
+        assert len(kpi_grid.children) == 4
+
+    def test_device_kpi_shows_cpu(self, monkeypatch, mock_loader, tmp_path):
+        with patch("quant.config.settings.get_device",
+                   return_value=torch.device("cpu")):
+            kpi_grid = self._get_kpi_grid(monkeypatch, mock_loader, tmp_path)
+            device_card = kpi_grid.children[3]
+            # The card should contain the text "CPU"
+            assert "CPU" in _extract_text(device_card)
+
+    def test_device_kpi_shows_mps(self, monkeypatch, mock_loader, tmp_path):
+        with patch("quant.config.settings.get_device",
+                   return_value=torch.device("mps")):
+            kpi_grid = self._get_kpi_grid(monkeypatch, mock_loader, tmp_path)
+            device_card = kpi_grid.children[3]
+            assert "MPS" in _extract_text(device_card)
+
+
+def _extract_text(component) -> str:
+    """Recursively extract text content from a Dash component tree."""
+    parts = []
+    if isinstance(component, str):
+        return component
+    children = getattr(component, "children", None)
+    if children is None:
+        return ""
+    if isinstance(children, str):
+        return children
+    if isinstance(children, list):
+        for child in children:
+            parts.append(_extract_text(child))
+    return " ".join(parts)
