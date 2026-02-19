@@ -271,6 +271,45 @@ class TestNanLossHandling:
         assert trainer._nan_count > 0, "NaN losses should have been counted"
 
 
+class TestNanValLossNotAcceptedAsImprovement:
+    """NaN/Inf val_loss must never overwrite best_val_loss."""
+
+    def test_nan_val_loss_not_accepted_as_improvement(
+        self, model_config: ModelConfig, device: torch.device
+    ) -> None:
+        from quant.models.trainer import Trainer
+
+        # A criterion that always returns NaN
+        class _AlwaysNanCriterion(nn.Module):
+            def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+                return torch.tensor(float("nan"), device=pred.device)
+
+        tc = TrainingConfig(
+            learning_rate=1e-2,
+            max_epochs=5,
+            early_stopping_patience=3,
+            max_grad_norm=1.0,
+            scheduler_patience=100,
+        )
+        model = _DummyModel(model_config)
+        trainer = Trainer(
+            model=model,
+            criterion=_AlwaysNanCriterion(),
+            model_config=model_config,
+            training_config=tc,
+            device=device,
+        )
+
+        train_loader, val_loader = _make_loaders(model_config, n_train=64, n_val=16)
+        metrics = trainer.fit(train_loader, val_loader, max_epochs=5)
+
+        # best_val_loss should remain at its initial value (inf)
+        assert trainer.best_val_loss == float("inf"), (
+            f"NaN val_loss must not be accepted as improvement, "
+            f"but best_val_loss={trainer.best_val_loss}"
+        )
+
+
 class TestStateRoundtrip:
     """get_state / load_state should perfectly restore trainer state."""
 

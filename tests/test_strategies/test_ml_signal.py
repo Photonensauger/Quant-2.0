@@ -150,6 +150,17 @@ class TestMinConfidenceFilter:
         )
 
 
+class TestNanPredictionsReturnsEmpty:
+    """NaN/Inf predictions must not crash but return an empty signal list."""
+
+    def test_nan_predictions_returns_empty(
+        self, strategy: MLSignalStrategy, data: pd.DataFrame
+    ) -> None:
+        nan_pred = np.array([np.nan, 0.05, np.inf])
+        signals = strategy.generate_signals(data, nan_pred)
+        assert signals == [], "NaN/Inf predictions must produce no signals"
+
+
 class TestSignalDirectionFromPredictionSign:
     """Negative mean prediction should yield direction == -1."""
 

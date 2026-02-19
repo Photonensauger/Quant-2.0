@@ -83,6 +83,31 @@ class TestAttentionLSTM:
                 small_model_config.forecast_horizon,
             ), f"Wrong shape for batch_size={batch_size}: {out.shape}"
 
+    def test_nan_input_produces_finite_output(
+        self,
+        small_model_config: ModelConfig,
+        cpu_device: torch.device,
+    ) -> None:
+        """LSTM with NaN inputs must still produce finite outputs."""
+        model = AttentionLSTM(small_model_config).to(cpu_device)
+        model.eval()
+        torch.manual_seed(99)
+
+        x = torch.randn(
+            2,
+            small_model_config.seq_len,
+            small_model_config.n_features,
+            device=cpu_device,
+        )
+        # Inject NaN values
+        x[:, 0, :] = float("nan")
+
+        with torch.no_grad():
+            out = model(x)
+
+        assert out.shape == (2, small_model_config.forecast_horizon)
+        assert torch.isfinite(out).all(), "Output must be finite even with NaN input"
+
     def test_gradient_flows(
         self,
         small_model_config: ModelConfig,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 import warnings
 from dataclasses import asdict
@@ -98,10 +99,14 @@ class Trainer:
             factor=self.training_config.scheduler_factor,
         )
 
+    # Maximum consecutive NaN/Inf batches before aborting the epoch.
+    _MAX_NAN_BATCHES: int = 10
+
     def _train_one_epoch(self, loader: DataLoader) -> float:
         self.model.train()
         total_loss = 0.0
         n_batches = 0
+        nan_this_epoch = 0
 
         for batch in loader:
             x, y = self._to_device(batch[0], batch[1])
@@ -121,11 +126,18 @@ class Trainer:
             # NaN guard
             if torch.isnan(loss) or torch.isinf(loss):
                 self._nan_count += 1
+                nan_this_epoch += 1
                 logger.error(
                     "NaN/Inf loss detected (count={}) -- skipping gradient step.",
                     self._nan_count,
                 )
                 self.optimizer.zero_grad()
+                if nan_this_epoch >= self._MAX_NAN_BATCHES:
+                    logger.error(
+                        "Aborting epoch: {} NaN/Inf batches reached limit.",
+                        nan_this_epoch,
+                    )
+                    break
                 continue
 
             self.optimizer.zero_grad()
@@ -139,7 +151,9 @@ class Trainer:
             total_loss += loss.item()
             n_batches += 1
 
-        return total_loss / max(n_batches, 1)
+        if n_batches == 0:
+            return float("inf")
+        return total_loss / n_batches
 
     @torch.no_grad()
     def _validate(self, loader: DataLoader) -> dict[str, float]:
@@ -164,6 +178,10 @@ class Trainer:
                 else:
                     raise
 
+            # Skip NaN/Inf validation losses
+            if torch.isnan(loss) or torch.isinf(loss):
+                continue
+
             total_loss += loss.item()
             n_batches += 1
 
@@ -174,7 +192,7 @@ class Trainer:
                 correct_dir += (pred_sign == true_sign).sum().item()
                 total_dir += pred_sign.numel()
 
-        avg_loss = total_loss / max(n_batches, 1)
+        avg_loss = total_loss / n_batches if n_batches > 0 else float("inf")
         dir_acc = correct_dir / max(total_dir, 1)
         return {"val_loss": avg_loss, "directional_accuracy": dir_acc}
 
@@ -242,8 +260,16 @@ class Trainer:
                 self.epoch, train_loss, val_loss, dir_acc, current_lr,
             )
 
-            # Early stopping check
-            if val_loss < self.best_val_loss:
+            # Abort if training has fully diverged
+            if not math.isfinite(train_loss):
+                logger.warning(
+                    "train_loss is inf/NaN at epoch {} -- aborting training.",
+                    self.epoch,
+                )
+                break
+
+            # Early stopping check -- NaN/Inf val_loss is never an improvement
+            if math.isfinite(val_loss) and val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
                 best_epoch = self.epoch
                 best_dir_acc = dir_acc

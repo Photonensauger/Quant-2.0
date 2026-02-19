@@ -100,6 +100,14 @@ class MLSignalStrategy(BaseStrategy):
         if predictions.size == 0:
             return []
 
+        # Guard against NaN/Inf predictions (e.g. from degraded LSTM on MPS)
+        if not np.all(np.isfinite(predictions)):
+            logger.warning(
+                "{}: predictions contain NaN/Inf -- skipping signal generation",
+                self.name,
+            )
+            return []
+
         symbol = self._infer_symbol(data)
         timestamp = self._latest_timestamp(data)
 

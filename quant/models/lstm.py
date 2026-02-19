@@ -98,4 +98,9 @@ class AttentionLSTM(BaseModel):
         context = attn_out[:, -1, :]  # [B, hidden]
 
         out = self.output_head(context)  # [B, forecast_horizon]
+
+        # NaN/Inf guard: replace with zeros to prevent downstream crashes
+        if not torch.isfinite(out).all():
+            out = torch.where(torch.isfinite(out), out, torch.zeros_like(out))
+
         return out
