@@ -1,5 +1,6 @@
 """Page 4: Model Analytics — Once UI style."""
 
+import json
 import os
 import subprocess
 import sys
@@ -99,11 +100,34 @@ def _get_checkpoint_info(model_key):
     return info
 
 
+def _load_training_metrics():
+    """Load training_metrics.json, normalizing both old (float) and new (dict) formats."""
+    metrics_path = _CHECKPOINT_DIR / "training_metrics.json"
+    if not metrics_path.exists():
+        return {}
+    try:
+        with open(metrics_path) as f:
+            raw = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+    # Normalize: old format is {model: float}, new format is {model: dict}
+    result = {}
+    for k, v in raw.items():
+        if isinstance(v, dict):
+            result[k] = v
+        else:
+            result[k] = {"directional_accuracy": float(v)}
+    return result
+
+
 def _model_cards():
-    """Build model registry cards with checkpoint status."""
+    """Build model registry cards with checkpoint status and training performance."""
     cards = []
+    training_metrics = _load_training_metrics()
+
     for m in MODEL_REGISTRY:
         ckpt = _get_checkpoint_info(m["key"])
+        metrics = training_metrics.get(m["key"], {})
 
         # Status badge
         if ckpt["exists"]:
@@ -119,6 +143,47 @@ def _model_cards():
             status = html.Span("Not Trained", className="badge-pill loss",
                                style={"fontSize": "0.65rem"})
             ckpt_info = html.Div()
+
+        # Training performance badges (only if metrics exist for this model)
+        perf_info = html.Div()
+        if metrics and ckpt["exists"]:
+            perf_badges = []
+            acc = metrics.get("directional_accuracy")
+            if acc is not None:
+                acc_class = "badge-pill profit" if acc >= 0.5 else "badge-pill loss"
+                perf_badges.append(html.Span(
+                    f"Acc {acc:.1%}", className=acc_class,
+                    style={"fontSize": "0.65rem"},
+                ))
+            val_loss = metrics.get("best_val_loss")
+            if val_loss is not None:
+                perf_badges.append(html.Span(
+                    f"Loss {val_loss:.4f}", className="badge-pill mono",
+                    style={"fontSize": "0.65rem"},
+                ))
+            elapsed = metrics.get("elapsed")
+            if elapsed is not None:
+                perf_badges.append(html.Span(
+                    f"{elapsed:.0f}s", className="badge-pill mono",
+                    style={"fontSize": "0.65rem"},
+                ))
+            n_params = metrics.get("n_params")
+            if n_params is not None:
+                if n_params >= 1_000_000:
+                    param_str = f"{n_params / 1_000_000:.1f}M params"
+                elif n_params >= 1_000:
+                    param_str = f"{n_params / 1_000:.1f}K params"
+                else:
+                    param_str = f"{n_params} params"
+                perf_badges.append(html.Span(
+                    param_str, className="badge-pill mono",
+                    style={"fontSize": "0.65rem"},
+                ))
+            if perf_badges:
+                perf_info = html.Div(
+                    perf_badges,
+                    style={"display": "flex", "gap": "0.3rem", "flexWrap": "wrap", "marginTop": "0.3rem"},
+                )
 
         cards.append(html.Div([
             html.Div([
@@ -138,6 +203,7 @@ def _model_cards():
                     html.Span(m["arch"], className="badge-pill mono", style={"fontSize": "0.65rem"}),
                 ], style={"display": "flex", "gap": "0.3rem", "flexWrap": "wrap"}),
                 ckpt_info,
+                perf_info,
             ]),
         ], className="card-surface"))
 

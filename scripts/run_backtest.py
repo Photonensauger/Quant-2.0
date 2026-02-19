@@ -191,8 +191,15 @@ def build_strategy(
             try:
                 with open(metrics_path) as f:
                     training_metrics = json.load(f)
+                # Normalize: support both old flat-float and new nested-dict formats
+                normalized = {}
+                for k, v in training_metrics.items():
+                    if isinstance(v, dict):
+                        normalized[k] = v.get("directional_accuracy", 0.0)
+                    else:
+                        normalized[k] = float(v)
                 # Filter to models actually used in this ensemble
-                relevant = {k: v for k, v in training_metrics.items() if k in models}
+                relevant = {k: v for k, v in normalized.items() if k in models}
                 if relevant:
                     total_acc = sum(relevant.values())
                     if total_acc > 0:

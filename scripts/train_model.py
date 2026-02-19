@@ -452,7 +452,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- Save training metrics for accuracy-based ensemble weighting ---------
     training_metrics = {
-        r["model"]: r["directional_accuracy"]
+        r["model"]: {
+            "directional_accuracy": r["directional_accuracy"],
+            "best_val_loss": r["best_val_loss"],
+            "best_epoch": r["best_epoch"],
+            "elapsed": round(r["elapsed"], 1),
+            "n_params": r["n_params"],
+        }
         for r in all_results
         if r.get("status") == "OK"
     }

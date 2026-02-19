@@ -25,6 +25,48 @@ C = config.COLORS
 
 ASSET_OPTIONS = config.ASSET_OPTIONS
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_CHECKPOINT_DIR = _PROJECT_ROOT / "checkpoints"
+
+_ALL_MODEL_KEYS = [
+    "transformer", "itransformer", "lstm", "momentum",
+    "causal", "schrodinger", "topological", "hamiltonian", "diffusion", "adversarial",
+]
+_MODEL_LABELS = {
+    "transformer": "Transformer",
+    "itransformer": "ITransformer",
+    "lstm": "LSTM",
+    "momentum": "Momentum",
+    "causal": "Causal",
+    "schrodinger": "Schrödinger",
+    "topological": "Topological",
+    "hamiltonian": "Hamiltonian",
+    "diffusion": "Diffusion",
+    "adversarial": "Adversarial",
+}
+
+
+def _get_trained_model_keys():
+    """Return list of model keys that have a checkpoint file."""
+    trained = []
+    for key in _ALL_MODEL_KEYS:
+        for suffix in ["_latest.pt", "_model.pt"]:
+            if (_CHECKPOINT_DIR / f"{key}{suffix}").exists():
+                trained.append(key)
+                break
+    return trained
+
+
+def _get_model_options():
+    """Build dropdown options; untrained models are disabled."""
+    trained = set(_get_trained_model_keys())
+    options = []
+    for key in _ALL_MODEL_KEYS:
+        is_trained = key in trained
+        label = f"{_MODEL_LABELS[key]}  [trained]" if is_trained else f"{_MODEL_LABELS[key]}  [not trained]"
+        options.append({"label": label, "value": key, "disabled": not is_trained})
+    return options
+
 # Metric display config: (key, label, format, higher_is_better)
 METRICS_TABLE = [
     ("total_return", "Total Return", ".2%", True),
@@ -314,6 +356,20 @@ layout = html.Div([
                     style={"width": "100%"},
                 )),
             ], style={"display": "flex", "gap": "1rem", "flexWrap": "wrap"}),
+
+            # Row 1b: Model selection (visible only for ensemble/ml)
+            html.Div([
+                _form_input("Models", dcc.Dropdown(
+                    id="bt-run-models",
+                    options=_get_model_options(),
+                    value=_get_trained_model_keys(),
+                    multi=True,
+                    placeholder="Select models...",
+                    searchable=True,
+                    className="once-dropdown",
+                    style={"width": "100%"},
+                ), hint="Only trained models can be selected", flex=1),
+            ], id="bt-run-models-row", style={"display": "flex", "gap": "1rem", "flexWrap": "wrap"}),
 
             # Divider
             html.Div(className="bt-form-divider"),
@@ -607,6 +663,16 @@ def _bt_read_rc():
 # ---------------------------------------------------------------------------
 
 @callback(
+    Output("bt-run-models-row", "style"),
+    Input("bt-run-strategy", "value"),
+)
+def toggle_model_selector(strategy):
+    if strategy in ("ensemble", "ml"):
+        return {"display": "flex", "gap": "1rem", "flexWrap": "wrap"}
+    return {"display": "none"}
+
+
+@callback(
     Output("bt-run-poll", "disabled"),
     Output("bt-run-status", "children"),
     Output("bt-run-log", "className"),
@@ -619,9 +685,10 @@ def _bt_read_rc():
     State("bt-run-start", "date"),
     State("bt-run-end", "date"),
     State("bt-run-capital", "value"),
+    State("bt-run-models", "value"),
     prevent_initial_call=True,
 )
-def start_backtest(n_clicks, strategy, assets, interval, start, end, capital):
+def start_backtest(n_clicks, strategy, assets, interval, start, end, capital, models):
     if not n_clicks or not all([strategy, assets, interval, start, end, capital]):
         return no_update, no_update, no_update, no_update, no_update
 
@@ -643,18 +710,25 @@ def start_backtest(n_clicks, strategy, assets, interval, start, end, capital):
     for f in (_BT_PID_FILE, _BT_LOG_FILE, _BT_RC_FILE):
         f.unlink(missing_ok=True)
 
+    # Build command
+    cmd = [
+        sys.executable, str(script),
+        "--strategy", strategy,
+        "--assets", assets_str,
+        "--interval", interval,
+        "--start", start,
+        "--end", end,
+        "--capital", str(int(capital)),
+    ]
+    # Pass --models for ML-based strategies when user selected specific models
+    if strategy in ("ensemble", "ml") and models:
+        models_str = ",".join(models) if isinstance(models, list) else models
+        cmd.extend(["--models", models_str])
+
     # Launch subprocess with stdout/stderr going to log file
     log_fh = open(_BT_LOG_FILE, "w")
     proc = subprocess.Popen(
-        [
-            sys.executable, str(script),
-            "--strategy", strategy,
-            "--assets", assets_str,
-            "--interval", interval,
-            "--start", start,
-            "--end", end,
-            "--capital", str(int(capital)),
-        ],
+        cmd,
         stdout=log_fh,
         stderr=subprocess.STDOUT,
         cwd=str(project_root),
