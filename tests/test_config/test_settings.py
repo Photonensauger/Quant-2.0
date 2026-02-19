@@ -29,7 +29,7 @@ class TestDataclassesInstantiate:
 
         model = ModelConfig()
         assert model.seq_len == 60
-        assert model.forecast_horizon == 5
+        assert model.forecast_horizon == 10
 
         training = TrainingConfig()
         assert training.max_epochs == 100
