@@ -37,11 +37,17 @@ from quant.execution.live import LiveExecutor
 from quant.execution.paper import PaperExecutor
 from quant.features.pipeline import FeaturePipeline
 from quant.models import (
+    AdversarialRegimeModel,
     AttentionLSTM,
+    CausalDiscoveryTransformer,
     CombinedLoss,
     DecoderTransformer,
+    EntropicPortfolioDiffusion,
+    HamiltonianNeuralODE,
     ITransformer,
     MomentumTransformer,
+    SchrodingerTransformer,
+    TopologicalAttentionNetwork,
     Trainer,
 )
 from quant.portfolio.position import PositionSizer
@@ -60,6 +66,13 @@ MODEL_REGISTRY: dict[str, type] = {
     "itransformer": ITransformer,
     "lstm": AttentionLSTM,
     "momentum": MomentumTransformer,
+    # Zug 37 Models
+    "causal": CausalDiscoveryTransformer,
+    "schrodinger": SchrodingerTransformer,
+    "topological": TopologicalAttentionNetwork,
+    "hamiltonian": HamiltonianNeuralODE,
+    "diffusion": EntropicPortfolioDiffusion,
+    "adversarial": AdversarialRegimeModel,
 }
 
 

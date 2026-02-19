@@ -33,11 +33,17 @@ from quant.data.provider import YFinanceProvider
 from quant.data.storage import DataStorage
 from quant.features.pipeline import FeaturePipeline
 from quant.models import (
+    AdversarialRegimeModel,
     AttentionLSTM,
+    CausalDiscoveryTransformer,
     CombinedLoss,
     DecoderTransformer,
+    EntropicPortfolioDiffusion,
+    HamiltonianNeuralODE,
     ITransformer,
     MomentumTransformer,
+    SchrodingerTransformer,
+    TopologicalAttentionNetwork,
     Trainer,
 )
 from quant.strategies.base import BaseStrategy
@@ -56,6 +62,13 @@ MODEL_REGISTRY: dict[str, type] = {
     "itransformer": ITransformer,
     "lstm": AttentionLSTM,
     "momentum": MomentumTransformer,
+    # Zug 37 Models
+    "causal": CausalDiscoveryTransformer,
+    "schrodinger": SchrodingerTransformer,
+    "topological": TopologicalAttentionNetwork,
+    "hamiltonian": HamiltonianNeuralODE,
+    "diffusion": EntropicPortfolioDiffusion,
+    "adversarial": AdversarialRegimeModel,
 }
 
 

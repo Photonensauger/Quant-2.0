@@ -40,6 +40,25 @@ MODEL_REGISTRY = [
     {"name": "PPOAgent", "key": "ppo", "icon": "bi bi-robot",
      "desc": "Proximal Policy Optimization reinforcement learning agent for trading.",
      "arch": "2 layers, hidden=128, clip=0.2", "type": "RL"},
+    # Zug 37 Models
+    {"name": "CausalDiscoveryTransformer", "key": "causal", "icon": "bi bi-diagram-2",
+     "desc": "Transformer with a learned causal adjacency matrix for feature interactions.",
+     "arch": "n layers, n heads, d_model, d_ff", "type": "Transformer"},
+    {"name": "SchrodingerTransformer", "key": "schrodinger", "icon": "bi bi-brilliance",
+     "desc": "Quantum-inspired transformer with parallel regime branches.",
+     "arch": "n layers, n heads, n regimes", "type": "Transformer"},
+    {"name": "TopologicalAttentionNetwork", "key": "topological", "icon": "bi bi-bezier2",
+     "desc": "Topological Data Analysis-inspired transformer with Betti-0 features.",
+     "arch": "n layers, n heads, n scales", "type": "Transformer"},
+    {"name": "HamiltonianNeuralODE", "key": "hamiltonian", "icon": "bi bi-infinity",
+     "desc": "Hamiltonian-inspired neural ODE using discrete symplectic leapfrog integration.",
+     "arch": "leapfrog steps, d_model (even)", "type": "ODE"},
+    {"name": "EntropicPortfolioDiffusion", "key": "diffusion", "icon": "bi bi-cloud-haze2",
+     "desc": "Diffusion-inspired model with iterative denoising refinement.",
+     "arch": "n layers, n heads, n diffusion steps", "type": "Diffusion"},
+    {"name": "AdversarialRegimeModel", "key": "adversarial", "icon": "bi bi-shield-shaded",
+     "desc": "GAN-inspired model with generator, discriminator, and regime classifier.",
+     "arch": "n layers, n heads, n regimes", "type": "GAN"},
 ]
 
 # Trainable model options for the dropdown (excludes PPO which has a separate training pipeline)
@@ -49,6 +68,12 @@ _TRAIN_MODEL_OPTIONS = [
     {"label": "ITransformer", "value": "itransformer"},
     {"label": "LSTM", "value": "lstm"},
     {"label": "Momentum", "value": "momentum"},
+    {"label": "Causal", "value": "causal"},
+    {"label": "Schrödinger", "value": "schrodinger"},
+    {"label": "Topological", "value": "topological"},
+    {"label": "Hamiltonian", "value": "hamiltonian"},
+    {"label": "Diffusion", "value": "diffusion"},
+    {"label": "Adversarial", "value": "adversarial"},
 ]
 
 # File-based state for cross-worker training tracking
