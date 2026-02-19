@@ -218,3 +218,18 @@ class DashboardDataLoader:
         self._cache.clear()
         self._bt_cache.clear()
         logger.debug("Dashboard data cache cleared")
+
+
+# ---------------------------------------------------------------------------
+# Shared singleton
+# ---------------------------------------------------------------------------
+
+_shared_loader: DashboardDataLoader | None = None
+
+
+def get_shared_loader() -> DashboardDataLoader:
+    """Return a process-wide shared loader instance."""
+    global _shared_loader
+    if _shared_loader is None:
+        _shared_loader = DashboardDataLoader()
+    return _shared_loader

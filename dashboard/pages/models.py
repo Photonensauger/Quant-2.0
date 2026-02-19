@@ -13,12 +13,12 @@ from pathlib import Path
 from datetime import datetime
 
 from dashboard.components.kpi_card import create_kpi_card
-from dashboard.data.loader import DashboardDataLoader
+from dashboard.data.loader import get_shared_loader
 from dashboard import config
 
 dash.register_page(__name__, path="/models", name="Models", order=3)
 
-loader = DashboardDataLoader()
+loader = get_shared_loader()
 C = config.COLORS
 ASSET_OPTIONS = config.ASSET_OPTIONS
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -412,11 +412,17 @@ def update_models(_n):
     trained = sum(1 for m in MODEL_REGISTRY if _get_checkpoint_info(m["key"])["exists"])
     total_bt = len(all_results)
 
+    from quant.config.settings import get_device
+    device = get_device()
+    device_label = str(device).upper()
+
     kpis = html.Div([
         create_kpi_card("Models", f"{len(MODEL_REGISTRY)}", "accent"),
         create_kpi_card("Trained", f"{trained}/{len(MODEL_REGISTRY)}",
                         "profit" if trained == len(MODEL_REGISTRY) else "warning"),
         create_kpi_card("Backtests", f"{total_bt}"),
+        create_kpi_card("Device", device_label,
+                        "accent" if device.type != "cpu" else ""),
     ], className="kpi-grid")
 
     # Model registry

@@ -15,12 +15,12 @@ import pandas as pd
 import numpy as np
 
 from dashboard.components.kpi_card import create_kpi_card
-from dashboard.data.loader import DashboardDataLoader
+from dashboard.data.loader import get_shared_loader
 from dashboard import config
 
 dash.register_page(__name__, path="/backtest", name="Backtest", order=2)
 
-loader = DashboardDataLoader()
+loader = get_shared_loader()
 C = config.COLORS
 
 ASSET_OPTIONS = config.ASSET_OPTIONS

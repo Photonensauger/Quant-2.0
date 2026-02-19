@@ -8,12 +8,12 @@ import pandas as pd
 import json
 
 from dashboard.components.trade_table import create_trade_table
-from dashboard.data.loader import DashboardDataLoader
+from dashboard.data.loader import get_shared_loader
 from dashboard import config
 
 dash.register_page(__name__, path="/positions", name="Positions", order=1)
 
-loader = DashboardDataLoader()
+loader = get_shared_loader()
 C = config.COLORS
 
 def _export_btn(id_str, label):

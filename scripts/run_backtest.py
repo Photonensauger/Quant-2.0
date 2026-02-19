@@ -294,8 +294,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help=(
             "Comma-separated model names to load (default: all available). "
-            "Options: transformer, itransformer, lstm, momentum."
+            "Options: " + ", ".join(MODEL_REGISTRY.keys()) + "."
         ),
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        choices=["auto", "cpu", "mps", "cuda"],
+        help="Device to run on (default: auto-detect MPS > CUDA > CPU).",
     )
     parser.add_argument(
         "--log-level",
@@ -313,6 +320,9 @@ def main(argv: list[str] | None = None) -> int:
     # --- Configuration -------------------------------------------------------
     config = SystemConfig()
     setup_logging(args.log_level)
+
+    if args.device and args.device != "auto":
+        config.device = torch.device(args.device)
 
     config.backtest.initial_capital = args.capital
 
@@ -332,7 +342,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.models:
         model_names = [m.strip() for m in args.models.split(",") if m.strip()]
     else:
-        model_names = ["transformer", "itransformer", "lstm"]
+        model_names = list(MODEL_REGISTRY.keys())
 
     print(f"\n{'=' * 60}")
     print(f"  Backtesting Engine")

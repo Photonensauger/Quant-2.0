@@ -334,6 +334,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Learning rate (overrides config default).",
     )
     parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        choices=["auto", "cpu", "mps", "cuda"],
+        help="Device to train on (default: auto-detect MPS > CUDA > CPU).",
+    )
+    parser.add_argument(
         "--log-level",
         type=str,
         default="INFO",
@@ -349,6 +356,9 @@ def main(argv: list[str] | None = None) -> int:
     # --- Configuration -------------------------------------------------------
     config = SystemConfig()
     setup_logging(args.log_level)
+
+    if args.device and args.device != "auto":
+        config.device = torch.device(args.device)
 
     # Override training config from CLI args
     config.training.max_epochs = args.epochs

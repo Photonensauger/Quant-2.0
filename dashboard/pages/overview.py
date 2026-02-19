@@ -10,12 +10,12 @@ from dashboard.components.kpi_card import create_kpi_card
 from dashboard.components.equity_chart import create_equity_chart
 from dashboard.components.drawdown_chart import create_drawdown_chart
 from dashboard.components.heatmap import create_monthly_returns_heatmap
-from dashboard.data.loader import DashboardDataLoader
+from dashboard.data.loader import get_shared_loader
 from dashboard import config
 
 dash.register_page(__name__, path="/", name="Overview", order=0)
 
-loader = DashboardDataLoader()
+loader = get_shared_loader()
 C = config.COLORS
 
 

@@ -7,12 +7,12 @@ import numpy as np
 import pandas as pd
 
 from dashboard.components.kpi_card import create_kpi_card
-from dashboard.data.loader import DashboardDataLoader
+from dashboard.data.loader import get_shared_loader
 from dashboard import config
 
 dash.register_page(__name__, path="/risk", name="Risk", order=4)
 
-loader = DashboardDataLoader()
+loader = get_shared_loader()
 C = config.COLORS
 THRESHOLDS = config.RISK_THRESHOLDS
 
